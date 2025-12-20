@@ -22,7 +22,6 @@ st.set_page_config(
 # ============================================================
 st.markdown("""
 <style>
-    /* 메인 헤더 */
     .main-header {
         font-size: 3rem;
         font-weight: bold;
@@ -40,42 +39,6 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* 메트릭 카드 스타일 */
-    .metric-container {
-        background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        text-align: center;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    
-    .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #E91E63;
-    }
-    
-    .metric-label {
-        font-size: 0.9rem;
-        color: #aaa;
-        margin-top: 0.5rem;
-    }
-    
-    /* 카드 스타일 */
-    .artist-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 15px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
-    }
-    
-    /* 사이드바 스타일 */
-    .css-1d391kg {
-        background: linear-gradient(180deg, #1A1A2E 0%, #16213E 100%);
-    }
-    
-    /* 구분선 */
     .divider {
         height: 3px;
         background: linear-gradient(90deg, #E91E63 0%, #9C27B0 100%);
@@ -84,7 +47,6 @@ st.markdown("""
         border-radius: 2px;
     }
     
-    /* 푸터 */
     .footer {
         text-align: center;
         color: #888;
@@ -92,7 +54,6 @@ st.markdown("""
         margin-top: 3rem;
     }
     
-    /* 인사이트 박스 */
     .insight-box {
         background: linear-gradient(135deg, #E91E63 0%, #9C27B0 100%);
         color: white;
@@ -100,31 +61,32 @@ st.markdown("""
         border-radius: 10px;
         margin: 1rem 0;
     }
+    
+    .update-info {
+        text-align: center;
+        color: #888;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================================
-# 데이터 (실제 분석 결과)
+# 데이터 로드 (CSV 파일에서)
 # ============================================================
 @st.cache_data
 def load_data():
-    data = {
-        'artist': ['NMIXX', 'PLAVE'],
-        'subscribers': [3810000, 1120000],
-        'total_views': [1774700038, 670533871],
-        'video_count': [1536, 1401],
-        'avg_views': [632147, 200592],
-        'avg_likes': [18500, 16800],
-        'avg_comments': [980, 3200],
-        'engagement_rate': [3.56, 9.98],
-        'views_per_subscriber': [16.6, 17.9],
-        'created_at': ['2021-07-12', '2022-06-16'],
-        'category': ['4세대 걸그룹', '버추얼 아이돌'],
-        'company': ['JYP Entertainment', 'VLAST']
-    }
-    return pd.DataFrame(data)
+    try:
+        df = pd.read_csv('channels_data.csv')
+        return df
+    except:
+        st.error("⚠️ channels_data.csv 파일을 찾을 수 없습니다.")
+        return pd.DataFrame()
 
 df = load_data()
+
+if df.empty:
+    st.stop()
 
 # ============================================================
 # 사이드바
@@ -154,7 +116,11 @@ with st.sidebar:
     # 정보
     st.markdown("### 📊 데이터 정보")
     st.markdown(f"**분석 아티스트:** {len(df)}개")
-    st.markdown(f"**최종 업데이트:** {datetime.now().strftime('%Y-%m-%d')}")
+    
+    # 수집 일시 표시
+    if 'collected_at' in df.columns:
+        last_update = df['collected_at'].iloc[0]
+        st.markdown(f"**최종 업데이트:** {last_update}")
     
     st.divider()
     st.markdown("### 💡 서비스 안내")
@@ -170,6 +136,10 @@ df_filtered = df[
     (df['category'].isin(selected_category))
 ]
 
+if df_filtered.empty:
+    st.warning("선택된 필터에 해당하는 데이터가 없습니다.")
+    st.stop()
+
 # ============================================================
 # 메인 콘텐츠
 # ============================================================
@@ -177,6 +147,10 @@ df_filtered = df[
 # 헤더
 st.markdown('<h1 class="main-header">KFANTRIX</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">K-pop 팬덤 데이터로 글로벌 마케팅 성공률을 높이다</p>', unsafe_allow_html=True)
+
+# 수집 일시 표시
+if 'collected_at' in df.columns:
+    st.markdown(f'<p class="update-info">📅 데이터 수집: {df["collected_at"].iloc[0]}</p>', unsafe_allow_html=True)
 
 # 구분선
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
@@ -191,40 +165,35 @@ col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
     st.metric(
         label="분석 아티스트",
-        value=f"{len(df_filtered)}개",
-        delta=None
+        value=f"{len(df_filtered)}개"
     )
 
 with col2:
     avg_subs = df_filtered['subscribers'].mean() / 1000000
     st.metric(
         label="평균 구독자",
-        value=f"{avg_subs:.1f}M",
-        delta=f"{((df_filtered['subscribers'].iloc[0] - df_filtered['subscribers'].iloc[-1]) / df_filtered['subscribers'].iloc[-1] * 100):.0f}% 차이" if len(df_filtered) > 1 else None
+        value=f"{avg_subs:.1f}M"
     )
 
 with col3:
     avg_views = df_filtered['avg_views'].mean() / 1000000
     st.metric(
         label="평균 조회수",
-        value=f"{avg_views:.2f}M",
-        delta=None
+        value=f"{avg_views:.2f}M"
     )
 
 with col4:
     avg_eng = df_filtered['engagement_rate'].mean()
     st.metric(
         label="평균 참여도",
-        value=f"{avg_eng:.2f}%",
-        delta=None
+        value=f"{avg_eng:.2f}%"
     )
 
 with col5:
-    avg_fan = df_filtered['views_per_subscriber'].mean()
+    avg_fan = df_filtered['fandom_activity'].mean()
     st.metric(
         label="팬덤 활성도",
-        value=f"{avg_fan:.1f}%",
-        delta=None
+        value=f"{avg_fan:.1f}%"
     )
 
 st.markdown("")
@@ -236,52 +205,49 @@ st.markdown("## 📈 아티스트 비교 분석")
 
 tab1, tab2, tab3 = st.tabs(["📊 기본 지표", "🎯 참여도 분석", "🌐 종합 스코어"])
 
+# 색상 팔레트
+colors = px.colors.qualitative.Set2
+
 with tab1:
     col_left, col_right = st.columns(2)
     
     with col_left:
         # 구독자 수 비교
         fig1 = px.bar(
-            df_filtered,
-            x='artist',
-            y='subscribers',
+            df_filtered.sort_values('subscribers', ascending=True),
+            x='subscribers',
+            y='artist',
+            orientation='h',
             color='artist',
-            color_discrete_sequence=['#E91E63', '#9C27B0'],
+            color_discrete_sequence=colors,
             title='구독자 수 비교'
         )
         fig1.update_layout(
             showlegend=False,
-            yaxis_title='구독자 수',
-            xaxis_title='',
+            xaxis_title='구독자 수',
+            yaxis_title='',
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)'
-        )
-        fig1.update_traces(
-            texttemplate='%{y:,.0f}',
-            textposition='outside'
         )
         st.plotly_chart(fig1, use_container_width=True)
     
     with col_right:
         # 평균 조회수 비교
         fig2 = px.bar(
-            df_filtered,
-            x='artist',
-            y='avg_views',
+            df_filtered.sort_values('avg_views', ascending=True),
+            x='avg_views',
+            y='artist',
+            orientation='h',
             color='artist',
-            color_discrete_sequence=['#E91E63', '#9C27B0'],
+            color_discrete_sequence=colors,
             title='영상당 평균 조회수'
         )
         fig2.update_layout(
             showlegend=False,
-            yaxis_title='평균 조회수',
-            xaxis_title='',
+            xaxis_title='평균 조회수',
+            yaxis_title='',
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)'
-        )
-        fig2.update_traces(
-            texttemplate='%{y:,.0f}',
-            textposition='outside'
         )
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -291,46 +257,40 @@ with tab2:
     with col_left2:
         # 참여도 비교
         fig3 = px.bar(
-            df_filtered,
-            x='artist',
-            y='engagement_rate',
+            df_filtered.sort_values('engagement_rate', ascending=True),
+            x='engagement_rate',
+            y='artist',
+            orientation='h',
             color='artist',
-            color_discrete_sequence=['#E91E63', '#9C27B0'],
+            color_discrete_sequence=colors,
             title='참여도 (좋아요+댓글/조회수)'
         )
         fig3.update_layout(
             showlegend=False,
-            yaxis_title='참여도 (%)',
-            xaxis_title='',
+            xaxis_title='참여도 (%)',
+            yaxis_title='',
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)'
-        )
-        fig3.update_traces(
-            texttemplate='%{y:.2f}%',
-            textposition='outside'
         )
         st.plotly_chart(fig3, use_container_width=True)
     
     with col_right2:
         # 팬덤 활성도 비교
         fig4 = px.bar(
-            df_filtered,
-            x='artist',
-            y='views_per_subscriber',
+            df_filtered.sort_values('fandom_activity', ascending=True),
+            x='fandom_activity',
+            y='artist',
+            orientation='h',
             color='artist',
-            color_discrete_sequence=['#E91E63', '#9C27B0'],
+            color_discrete_sequence=colors,
             title='팬덤 활성도 (평균조회수/구독자)'
         )
         fig4.update_layout(
             showlegend=False,
-            yaxis_title='활성도 (%)',
-            xaxis_title='',
+            xaxis_title='활성도 (%)',
+            yaxis_title='',
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)'
-        )
-        fig4.update_traces(
-            texttemplate='%{y:.1f}%',
-            textposition='outside'
         )
         st.plotly_chart(fig4, use_container_width=True)
 
@@ -343,24 +303,21 @@ with tab3:
         
         fig5 = go.Figure()
         
-        colors = ['#E91E63', '#9C27B0']
         for idx, row in df_filtered.iterrows():
-            # 정규화
             values = [
                 row['subscribers'] / df['subscribers'].max(),
                 row['avg_views'] / df['avg_views'].max(),
                 row['engagement_rate'] / df['engagement_rate'].max(),
-                row['views_per_subscriber'] / df['views_per_subscriber'].max()
+                row['fandom_activity'] / df['fandom_activity'].max()
             ]
-            values.append(values[0])  # 닫기
+            values.append(values[0])
             
             fig5.add_trace(go.Scatterpolar(
                 r=values,
                 theta=categories + [categories[0]],
                 fill='toself',
                 name=row['artist'],
-                line_color=colors[idx % 2],
-                fillcolor=f"rgba{tuple(list(int(colors[idx % 2].lstrip('#')[i:i+2], 16) for i in (0, 2, 4)) + [0.3])}"
+                opacity=0.7
             ))
         
         fig5.update_layout(
@@ -379,7 +336,7 @@ with tab3:
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.2,
+                y=-0.3,
                 xanchor="center",
                 x=0.5
             )
@@ -389,48 +346,82 @@ with tab3:
     with col_insight:
         st.markdown("### 💡 인사이트")
         
-        if len(df_filtered) >= 2:
-            nmixx = df_filtered[df_filtered['artist'] == 'NMIXX']
-            plave = df_filtered[df_filtered['artist'] == 'PLAVE']
-            
-            if not nmixx.empty and not plave.empty:
-                st.markdown("""
-                <div class="insight-box">
-                <strong>NMIXX</strong><br>
-                • 대형 기획사 안정적 팬덤<br>
-                • 높은 구독자 & 조회수<br>
-                • 글로벌 확장 진행 중
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.markdown("""
-                <div class="insight-box">
-                <strong>PLAVE</strong><br>
-                • 버추얼 아이돌 급성장<br>
-                • 참여도 9.98% (매우 높음)<br>
-                • MZ세대 타겟 강점
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.info("💡 **브랜드 협업 추천**: PLAVE는 높은 참여도로 팬 반응형 캠페인에, NMIXX는 대중성 있는 광고에 적합")
+        # 참여도 TOP 3
+        top_engagement = df_filtered.nlargest(3, 'engagement_rate')
+        st.markdown("**🔥 참여도 TOP 3**")
+        for _, row in top_engagement.iterrows():
+            st.markdown(f"- {row['artist']}: {row['engagement_rate']}%")
+        
+        st.markdown("")
+        
+        # 구독자 TOP 3
+        top_subs = df_filtered.nlargest(3, 'subscribers')
+        st.markdown("**👑 구독자 TOP 3**")
+        for _, row in top_subs.iterrows():
+            st.markdown(f"- {row['artist']}: {row['subscribers']:,}")
+        
+        st.markdown("")
+        
+        # 팬덤 활성도 TOP 3
+        top_fandom = df_filtered.nlargest(3, 'fandom_activity')
+        st.markdown("**💜 팬덤 활성도 TOP 3**")
+        for _, row in top_fandom.iterrows():
+            st.markdown(f"- {row['artist']}: {row['fandom_activity']}%")
+
+# ============================================================
+# 카테고리별 분석
+# ============================================================
+st.markdown('<hr class="divider">', unsafe_allow_html=True)
+st.markdown("## 📂 카테고리별 분석")
+
+col_cat1, col_cat2 = st.columns(2)
+
+with col_cat1:
+    # 카테고리별 평균 구독자
+    cat_subs = df_filtered.groupby('category')['subscribers'].mean().reset_index()
+    fig_cat1 = px.pie(
+        cat_subs,
+        values='subscribers',
+        names='category',
+        title='카테고리별 평균 구독자 비중',
+        color_discrete_sequence=colors
+    )
+    st.plotly_chart(fig_cat1, use_container_width=True)
+
+with col_cat2:
+    # 카테고리별 평균 참여도
+    cat_eng = df_filtered.groupby('category')['engagement_rate'].mean().reset_index()
+    fig_cat2 = px.bar(
+        cat_eng.sort_values('engagement_rate', ascending=True),
+        x='engagement_rate',
+        y='category',
+        orientation='h',
+        title='카테고리별 평균 참여도',
+        color='category',
+        color_discrete_sequence=colors
+    )
+    fig_cat2.update_layout(showlegend=False)
+    st.plotly_chart(fig_cat2, use_container_width=True)
 
 # ============================================================
 # 상세 데이터 테이블
 # ============================================================
+st.markdown('<hr class="divider">', unsafe_allow_html=True)
 st.markdown("## 📋 상세 데이터")
 
 # 데이터 포맷팅
-df_display = df_filtered.copy()
+df_display = df_filtered[['artist', 'category', 'subscribers', 'avg_views', 'avg_likes', 
+                          'avg_comments', 'engagement_rate', 'fandom_activity', 'recent_videos_30d']].copy()
 df_display['subscribers'] = df_display['subscribers'].apply(lambda x: f"{x:,}")
-df_display['total_views'] = df_display['total_views'].apply(lambda x: f"{x:,}")
-df_display['avg_views'] = df_display['avg_views'].apply(lambda x: f"{x:,.0f}")
+df_display['avg_views'] = df_display['avg_views'].apply(lambda x: f"{x:,}")
+df_display['avg_likes'] = df_display['avg_likes'].apply(lambda x: f"{x:,}")
+df_display['avg_comments'] = df_display['avg_comments'].apply(lambda x: f"{x:,}")
 df_display['engagement_rate'] = df_display['engagement_rate'].apply(lambda x: f"{x:.2f}%")
-df_display['views_per_subscriber'] = df_display['views_per_subscriber'].apply(lambda x: f"{x:.1f}%")
+df_display['fandom_activity'] = df_display['fandom_activity'].apply(lambda x: f"{x:.2f}%")
 
 # 컬럼명 한글화
-df_display.columns = ['아티스트', '구독자', '총 조회수', '영상 수', '평균 조회수', 
-                      '평균 좋아요', '평균 댓글', '참여도', '팬덤 활성도', 
-                      '채널 생성일', '카테고리', '소속사']
+df_display.columns = ['아티스트', '카테고리', '구독자', '평균 조회수', '평균 좋아요', 
+                      '평균 댓글', '참여도', '팬덤 활성도', '최근 30일 영상']
 
 st.dataframe(df_display, use_container_width=True, hide_index=True)
 
@@ -491,6 +482,6 @@ st.markdown("""
 <div class="footer">
     <p><strong>KFANTRIX</strong> - K-pop 팬덤 데이터로 글로벌 마케팅 성공률을 높이다</p>
     <p>© 2025 KFANTRIX. All rights reserved.</p>
-    <p>📧 contact@kfantrix.com | 🌐 www.kfantrix.com</p>
+    <p>📧 contact@kfantrix.com</p>
 </div>
 """, unsafe_allow_html=True)
