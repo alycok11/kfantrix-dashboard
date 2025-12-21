@@ -112,7 +112,7 @@ def load_deep_analysis(prefix):
 GROUPS = {
     'PLAVE': {'prefix': 'plave', 'color': '#8B5CF6', 'emoji': '💜'},
     'NMIXX': {'prefix': 'nmixx', 'color': '#EC4899', 'emoji': '💗'},
-    'Stray Kids': {'prefix': 'skz', 'color': '#F59E0B', 'emoji': '🖤'}
+    'skz': {'prefix': 'skz', 'color': '#F59E0B', 'emoji': '🖤'}
 }
 
 channel_data = load_channel_data()
